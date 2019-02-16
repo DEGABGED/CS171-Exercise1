@@ -1,0 +1,4 @@
+*
+!*.cu
+!*.md
+!.gitignore
