@@ -26,22 +26,21 @@ void kernel_1t1e(float *d_A, float *d_B, float *d_C) {
 
 __global__
 void kernel_1t1r(float *d_A, float *d_B, float *d_C,rows) {
-    int i = threadIdx.x;
-    int j = threadIdx.y;
+    int i = 0;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
 
-    for(j = threadIdx.y;j<rows;j++){
-        d_A[i][j] = d_B[i][j] + d_C[i][j];
+    for(i = 0;i<rows;i++){
+        d_A[i*rows + j] = d_B[i*rows + j] + d_C[i*rows + j];
     }
-    
 }
 
 __global__
 void kernel_1t1c(float *d_A, float *d_B, float *d_C,rows) {
-    int i = threadIdx.x;
-    int j = threadIdx.y;
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = 0;
 
-    for(i = threadIdx.x;i<rows;i++){
-        d_A[i][j] = d_B[i][j] + d_C[i][j];
+    for(j = 0;j<rows;j++){
+        d_A[i*rows + j] = d_B[i*rows + j] + d_C[i*rows + j];
     }
 }
 
@@ -72,7 +71,7 @@ void hostFunction(float *A, float *B, float *C, int rows) {
     cudaMemcpy(A, d_A, rows*rows*sizeof(float), cudaMemcpyDeviceToHost);
 
     // Call kernel function
-    kernel_1t1c<<<numBlocks, threadsPerBlock>>>(d_A, d_B, d_C,rows);
+    kernel_1t1c<<<threadsPerBlock, numBlocks>>>(d_A, d_B, d_C,rows);
 
     // Get return value
     cudaMemcpy(A, d_A, rows*rows*sizeof(float), cudaMemcpyDeviceToHost);
