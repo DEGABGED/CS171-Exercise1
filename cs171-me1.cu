@@ -48,6 +48,8 @@ void kernel_1t1c(float *d_A, float *d_B, float *d_C,rows) {
 void hostFunction(float *A, float *B, float *C, int rows) {
     // Allocate device memory
     float *d_A, *d_B, *d_C;
+    int numBlocks = 1;
+    dim3 threadsPerBlock(rows,1);
 
     cudaMalloc(&d_A, rows*rows*sizeof(float));
     cudaMalloc(&d_B, rows*rows*sizeof(float));
@@ -64,13 +66,13 @@ void hostFunction(float *A, float *B, float *C, int rows) {
     cudaMemcpy(A, d_A, rows*rows*sizeof(float), cudaMemcpyDeviceToHost);
 
     // Call kernel function
-    kernel_1t1r<<<rows, 1>>>(d_A, d_B, d_C,rows);
+    kernel_1t1r<<<threadsPerBlock, numBlocks>>>(d_A, d_B, d_C,rows);
 
     // Get return value
     cudaMemcpy(A, d_A, rows*rows*sizeof(float), cudaMemcpyDeviceToHost);
 
     // Call kernel function
-    kernel_1t1c<<<1, rows>>>(d_A, d_B, d_C,rows);
+    kernel_1t1c<<<numBlocks, threadsPerBlock>>>(d_A, d_B, d_C,rows);
 
     // Get return value
     cudaMemcpy(A, d_A, rows*rows*sizeof(float), cudaMemcpyDeviceToHost);
