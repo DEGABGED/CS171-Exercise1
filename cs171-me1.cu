@@ -18,10 +18,24 @@ void printDevProp(cudaDeviceProp devProp) {
     return;
 }
 
+void printMatrix(float *A, int dim) {
+    printf("[\n");
+    for (int i=0; i<dim; i++) {
+        printf("  [");
+        for (int j=0; j<dim; j++) {
+            printf("%.2f, ", A[i*dim + j]);
+        }
+        printf("]\n");
+    }
+    printf("]\n");
+}
+
 __global__
-void kernel_1t1e(float *d_A, float *d_B, float *d_C) {
+void kernel_1t1e(float *d_A, float *d_B, float *d_C, int size) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    d_A[idx] = d_B[idx] + d_C[idx];
+    if (idx < size) {
+        d_A[idx] = d_B[idx] + d_C[idx];
+    }
 }
 
 __global__
@@ -59,7 +73,9 @@ void hostFunction(float *A, float *B, float *C, int rows) {
     cudaMemcpy(d_C, C, rows*rows*sizeof(float), cudaMemcpyHostToDevice);
 
     // Call kernel function
-    kernel_1t1e<<<rows, rows>>>(d_A, d_B, d_C);
+    int size = rows*rows;
+    kernel_1t1e<<<(int) (rows/1024) + 1, 1024>>>(d_A, d_B, d_C, size);
+    cudaDeviceSynchronize();
 
     // Get return value
     cudaMemcpy(A, d_A, rows*rows*sizeof(float), cudaMemcpyDeviceToHost);
@@ -109,7 +125,7 @@ int main() {
 
     // In my (Francis) local machine there is only one CUDA machine, so I'll hardcode that one here
     // Allocate memory
-    const int rows = 256;
+    const int rows = 16;
     const int cols = rows;
     float *A, *B, *C;
     A = (float*) malloc(sizeof(float) * rows * cols);
@@ -126,6 +142,13 @@ int main() {
 
     // Call the host function
     hostFunction(A, B, C, rows);
+
+    printf("A:\n");
+    printMatrix(A, rows);
+    printf("B:\n");
+    printMatrix(B, rows);
+    printf("C:\n");
+    printMatrix(C, rows);
 
     // Free memory
     free(A);
