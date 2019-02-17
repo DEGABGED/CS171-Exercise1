@@ -24,6 +24,27 @@ void kernel_1t1e(float *d_A, float *d_B, float *d_C) {
     d_A[idx] = d_B[idx] + d_C[idx];
 }
 
+__global__
+void kernel_1t1r(float *d_A, float *d_B, float *d_C,rows) {
+    int i = threadIdx.x;
+    int j = threadIdx.y;
+
+    for(j = threadIdx.y;j<rows;j++){
+        d_A[i][j] = d_B[i][j] + d_C[i][j];
+    }
+    
+}
+
+__global__
+void kernel_1t1c(float *d_A, float *d_B, float *d_C,rows) {
+    int i = threadIdx.x;
+    int j = threadIdx.y;
+
+    for(i = threadIdx.x;i<rows;i++){
+        d_A[i][j] = d_B[i][j] + d_C[i][j];
+    }
+}
+
 void hostFunction(float *A, float *B, float *C, int rows) {
     // Allocate device memory
     float *d_A, *d_B, *d_C;
@@ -42,10 +63,28 @@ void hostFunction(float *A, float *B, float *C, int rows) {
     // Get return value
     cudaMemcpy(A, d_A, rows*rows*sizeof(float), cudaMemcpyDeviceToHost);
 
+    // Call kernel function
+    kernel_1t1r<<<rows, 1>>>(d_A, d_B, d_C,rows);
+
+    // Get return value
+    cudaMemcpy(A, d_A, rows*rows*sizeof(float), cudaMemcpyDeviceToHost);
+
+    // Call kernel function
+    kernel_1t1c<<<1, rows>>>(d_A, d_B, d_C,rows);
+
+    // Get return value
+    cudaMemcpy(A, d_A, rows*rows*sizeof(float), cudaMemcpyDeviceToHost);
+
     // Free memory
     cudaFree(d_A);
     cudaFree(d_B);
     cudaFree(d_C);
+
+    /*
+    int numBlocks = 1;
+    dim3 threadsPerBlock(rows,1);
+    kernel_1t1r<<<numBlocks,threadsPerBlock>>>
+    */
 
     /*
     for (int i=0; i<rows; i++) {
