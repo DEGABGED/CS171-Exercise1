@@ -1,13 +1,96 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <cuda.h>
 
-void matrixAdd(dim) {
-    float A[dim][dim];
-    float B[dim][dim];
-    float C[dim][dim];
+void printDevProp(cudaDeviceProp devProp) {
+    printf("%s\n", devProp.name);
+    printf("Major revision number:         %d\n", devProp.major);
+    printf("Minor revision number:         %d\n", devProp.minor);
+    printf("Total global memory:           %u bytes\n", devProp.totalGlobalMem);
+    printf("Number of multiprocessors:     %d\n", devProp.multiProcessorCount);
+    printf("Total shared memory per block: %u\n",devProp.sharedMemPerBlock);
+    printf("Total registers per block:     %d\n", devProp.regsPerBlock);
+    printf("Warp size:                     %d\n", devProp.warpSize);
+    printf("Maximum memory pitch:          %u\n", devProp.memPitch);
+    printf("Total constant memory:         %u\n", devProp.totalConstMem);
+    printf("Maximum threads per block:     %d\n", devProp.maxThreadsPerBlock);
+    printf("Maximum threads per dimension: %d,%d,%d\n", devProp.maxThreadsDim[0], devProp.maxThreadsDim[1], devProp.maxThreadsDim[2]);
+    return;
+}
+
+__global__
+void kernel_1t1e(float *d_A, float *d_B, float *d_C) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    d_A[idx] = d_B[idx] + d_C[idx];
+}
+
+void hostFunction(float *A, float *B, float *C, int rows) {
+    // Allocate device memory
+    float *d_A, *d_B, *d_C;
+
+    cudaMalloc(&d_A, rows*rows*sizeof(float));
+    cudaMalloc(&d_B, rows*rows*sizeof(float));
+    cudaMalloc(&d_C, rows*rows*sizeof(float));
+
+    // Copy values to device memory
+    cudaMemcpy(d_B, B, rows*rows*sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_C, C, rows*rows*sizeof(float), cudaMemcpyHostToDevice);
+
+    // Call kernel function
+    kernel_1t1e<<<rows, rows>>>(d_A, d_B, d_C);
+
+    // Get return value
+    cudaMemcpy(A, d_A, rows*rows*sizeof(float), cudaMemcpyDeviceToHost);
+
+    // Free memory
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
+
+    /*
+    for (int i=0; i<rows; i++) {
+        for (int j=0; j<rows; j++) {
+            A[i*rows + j] = B[i*rows + j] + C[i*rows + j];
+        }
+    }
+    */
 }
 
 int main() {
+    // Device Query first
+    int deviceCount;
+    cudaGetDeviceCount(&deviceCount);
+    int device;
+    for (device = 0; device < deviceCount; ++device) {
+        cudaDeviceProp deviceProp;
+        cudaGetDeviceProperties(&deviceProp, device);
+        printDevProp(deviceProp);
+    }
+
+    // In my (Francis) local machine there is only one CUDA machine, so I'll hardcode that one here
+    // Allocate memory
+    const int rows = 256;
+    const int cols = rows;
+    float *A, *B, *C;
+    A = (float*) malloc(sizeof(float) * rows * cols);
+    B = (float*) malloc(sizeof(float) * rows * cols);
+    C = (float*) malloc(sizeof(float) * rows * cols);
+
+    // Generate the values
+    for (int i=0; i<rows; i++) {
+        for (int j=0; j<cols; j++) {
+            B[i*rows + j] = (float) rand() / (float) (RAND_MAX / 100);
+            C[i*rows + j] = (float) rand() / (float) (RAND_MAX / 100);
+        }
+    }
+
     // Call the host function
-    matrixAdd(50);
+    hostFunction(A, B, C, rows);
+
+    // Free memory
+    free(A);
+    free(B);
+    free(C);
+
+    printf("Done!\n");
 }
