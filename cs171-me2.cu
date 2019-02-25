@@ -59,9 +59,6 @@ void matmul_rec_glob(float *d_A, float *d_B, float *d_C, int n, int m, int k) {
     int rows = blockIdx.y * blockDim.y + threadIdx.y;
     int cols = blockIdx.x * blockDim.x + threadIdx.x;
 
-    __shared__ float M[][];
-    __shared__ float N[][];
-
     if ((rows < n) && (cols < m)) {
         float val = 0;
         for (int i = 0; i < k; i++) {
@@ -74,8 +71,8 @@ void matmul_rec_glob(float *d_A, float *d_B, float *d_C, int n, int m, int k) {
 __global__
 void matmul_rec_shar(float *d_A, float *d_B, float *d_C, int n, int m, int k) {
 
-    _shared_ float B_shared[TILE_WIDTH][TILE_WIDTH];
-    _shared_ float C_shared[TILE_WIDTH][TILE_WIDTH];
+    __shared__ float B_shared[TILE_WIDTH][TILE_WIDTH];
+    __shared__ float C_shared[TILE_WIDTH][TILE_WIDTH];
 
     int rows = blockIdx.y * TILE_WIDTH + threadIdx.y;
     int cols = blockIdx.x * TILE_WIDTH + threadIdx.x;
@@ -115,8 +112,8 @@ double hostFunction(float *A, float *B, float *C, int n, int m, int k, int block
     cudaMemcpy(d_C, C, k*m*sizeof(float), cudaMemcpyHostToDevice);
 
     // Call kernel function
-    const int dimY = blockSize / 32;
-    const int dimX = 32;
+    const int dimY = 16;
+    const int dimX = 16;
     dim3 dimBlock(dimX, dimY, 1);
     dim3 dimGrid(ceil((float) n / dimX), ceil((float) m / dimY), 1);
 
@@ -164,9 +161,9 @@ int main() {
     // A: n x m
     // B: n x k
     // C: k x m
-    const int n = 2;
-    const int m = 2;
-    const int k = 4;
+    const int n = 16;
+    const int m = 16;
+    const int k = 16;
     float *A, *B, *C;
     A = (float*) malloc(sizeof(float) * n * m);
     B = (float*) malloc(sizeof(float) * n * k);
@@ -175,7 +172,7 @@ int main() {
     // Benchmarking
     // Source: https://devblogs.nvidia.com/how-implement-performance-metrics-cuda-cc/
     int kernel = 0;
-    int runs = 1;
+    int runs = 5;
     double time_spent = 0.0;
     double ave_time = 0.0;
     printf("\n");
@@ -185,8 +182,6 @@ int main() {
         for (int run=0; run<runs; run++) {
             populateMatrix(B, n, k);
             populateMatrix(C, k, m);
-            printMatrixFlat(B, n, k);
-            printMatrixFlat(C, k, m);
             time_spent = hostFunction(A, B, C, n, m, k, blockSize, kernel);
             ave_time += time_spent;
             printf("%.4f\t", time_spent);
