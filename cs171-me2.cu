@@ -81,7 +81,7 @@ void matmul_rec_shar(float *d_A, float *d_B, float *d_C, int n, int m, int k) {
         float val = 0;
         for (int i = 0; i<k/TILE_WIDTH; ++i){
             B_shared[threadIdx.y][threadIdx.x] = d_B[rows*k + i*TILE_WIDTH + threadIdx.x];
-            C_shared[threadIdx.y][threadIdx.x] = d_C[(k*TILE_WIDTH + threadIdx.y)*k + cols];
+            C_shared[threadIdx.y][threadIdx.x] = d_C[(i*TILE_WIDTH + threadIdx.y)*k + cols];
             __syncthreads();
             for (int j = 0; j < TILE_WIDTH; ++j) {
                 val += B_shared[threadIdx.y][j] * C_shared[j][threadIdx.x];
