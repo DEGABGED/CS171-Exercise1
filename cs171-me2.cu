@@ -33,12 +33,21 @@ void printMatrix(float *A, int rows, int cols) {
     printf("]\n");
 }
 
+void printMatrixFlat(float *A, int rows, int cols) {
+    printf("[");
+    for (int i=0; i<rows; i++) {
+        for (int j=0; j<cols; j++) {
+            printf("%.2f, ", A[i*cols + j]);
+        }
+    }
+    printf("]\n");
+}
+
 void populateMatrix(float *A, int rows, int cols) {
     // Generate the values
     for (int i=0; i<rows; i++) {
         for (int j=0; j<cols; j++) {
-            //A[i*rows + j] = (float) rand() / (float) (RAND_MAX / 100);
-            A[i*rows + j] = i + j;
+            A[i*cols + j] = (float) rand() / (float) (RAND_MAX / 100);
         }
     }
 }
@@ -124,9 +133,9 @@ int main() {
     // A: n x m
     // B: n x k
     // C: k x m
-    const int n = 4;
-    const int m = n;
-    const int k = m;
+    const int n = 2;
+    const int m = 2;
+    const int k = 4;
     float *A, *B, *C;
     A = (float*) malloc(sizeof(float) * n * m);
     B = (float*) malloc(sizeof(float) * n * k);
@@ -145,6 +154,8 @@ int main() {
         for (int run=0; run<runs; run++) {
             populateMatrix(B, n, k);
             populateMatrix(C, k, m);
+            printMatrixFlat(B, n, k);
+            printMatrixFlat(C, k, m);
             time_spent = hostFunction(A, B, C, n, m, k, blockSize, kernel);
             ave_time += time_spent;
             printf("%.4f\t", time_spent);
@@ -158,6 +169,10 @@ int main() {
     printMatrix(A, n, m);
     printMatrix(B, n, k);
     printMatrix(C, k, m);
+
+    // printMatrixFlat(A, n, m);
+    // printMatrixFlat(B, n, k);
+    // printMatrixFlat(C, k, m);
 
     // Free memory
     free(A);
