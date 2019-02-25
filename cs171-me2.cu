@@ -4,6 +4,8 @@
 #include <time.h>
 #include <math.h>
 
+#define TILE_WIDTH 16
+
 void printDevProp(cudaDeviceProp devProp) {
     // Source: https://stackoverflow.com/questions/32530604/how-can-i-get-number-of-cores-in-cuda-device
     printf("%s\n", devProp.name);
@@ -57,12 +59,38 @@ void matmul_rec_glob(float *d_A, float *d_B, float *d_C, int n, int m, int k) {
     int rows = blockIdx.y * blockDim.y + threadIdx.y;
     int cols = blockIdx.x * blockDim.x + threadIdx.x;
 
+    __shared__ float M[][];
+    __shared__ float N[][];
+
     if ((rows < n) && (cols < m)) {
         float val = 0;
         for (int i = 0; i < k; i++) {
             val += d_B[rows*k + i] * d_C[i*m + cols];
         }
         d_A[rows*m + cols] = val;
+    }
+}
+
+__global__
+void matmul_rec_shar(float *d_A, float *d_B, float *d_C, int n, int m, int k) {
+
+    _shared_ float B_shared[TILE_WIDTH][TILE_WIDTH];
+    _shared_ float C_shared[TILE_WIDTH][TILE_WIDTH];
+
+    int rows = blockIdx.y * TILE_WIDTH + threadIdx.y;
+    int cols = blockIdx.x * TILE_WIDTH + threadIdx.x;
+
+    if ((rows < n) && (cols < m)) {
+        float val = 0;
+        for (int i = 0; i<k/TILE_WIDTH; i++){
+            B_shared[threadIdx.y][threadIdx.x] = d_B[rows*k + i*TILE_WIDTH + threadIdx.x];
+            C_shared[threadIdx.y][threadIdx.x] = d_C[(k*TILE_WIDTH + threadIdx.y)*k + cols];
+            __syncthreads();
+            for (int j = 0; j < TILE_WIDTH; j++) {
+                val += B_shared[threadIdx.y][j] * C_shared[j][threadIdx.x];
+            }
+            d_A[rows*k + cols] = val;
+        }
     }
 }
 
@@ -95,6 +123,9 @@ double hostFunction(float *A, float *B, float *C, int n, int m, int k, int block
     cudaEventRecord(start);
     if (kernel_choice == 0) {
         matmul_rec_glob<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, n, m, k);
+    }
+    else if (kernel_choice == 1) {
+        matmul_rec_shar<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, n, m, k);
     }
     cudaEventRecord(stop);
     cudaDeviceSynchronize();
@@ -149,7 +180,7 @@ int main() {
     double ave_time = 0.0;
     printf("\n");
 
-    while (kernel < 1) {
+    while (kernel < 2) {
         printf("#%d:\t", kernel);
         for (int run=0; run<runs; run++) {
             populateMatrix(B, n, k);
