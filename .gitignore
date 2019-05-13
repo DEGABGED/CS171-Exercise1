@@ -2,3 +2,4 @@
 !*.cu
 !*.md
 !.gitignore
+!*.ipynb
