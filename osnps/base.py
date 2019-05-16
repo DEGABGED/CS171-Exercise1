@@ -33,3 +33,7 @@ class OSNPS(object):
         for i in range(1, self.H):
             arg = i if F[i] > F[arg] else arg
         return arg
+
+    def generate_learning_params(self):
+        self.a = 0.15 * np.random.random_sample(self.m) + 0.05
+        self.delta = 0.015 * rand() + 0.005
