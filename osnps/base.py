@@ -4,7 +4,7 @@ from random import random as rand
 
 class KnapsackProblem(object):
     def __init__(self, m):
-        self.omega = m*3
+        self.omega = 50
         self.K = m
         self.w = np.random.randint(1, self.omega, self.K)
         self.p = self.w + 0.5*self.omega

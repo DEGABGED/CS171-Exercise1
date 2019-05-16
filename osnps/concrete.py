@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from random import random as rand
 from math import floor
@@ -37,6 +38,8 @@ class SerialOSNPS(OSNPS):
                     P[i,j] += self.delta
 
     def run(self, runs):
+        start = time.time()
+
         self.P = np.random.random_sample((self.H, self.m))
         self.generate_learning_params()
 
@@ -56,8 +59,11 @@ class SerialOSNPS(OSNPS):
             F = self.fitness_vector(self.T)
             ave_fitness.append(np.mean(F))
             max_fitness.append(np.max(F))
-            
-        return ave_fitness, max_fitness
+
+        end = time.time()
+        runtime = end - start
+
+        return ave_fitness, max_fitness, runtime
 
 
 class ParallelOSNPS(OSNPS):
@@ -126,6 +132,7 @@ class ParallelOSNPS(OSNPS):
                 P[x,y] += delta
 
     def run(self, runs):
+        start = time.time()
 
         # Define the initial probability array and learning rate
         self.P = np.random.random_sample((self.H, self.m))
@@ -162,5 +169,7 @@ class ParallelOSNPS(OSNPS):
             F = self.fitness_vector(T_device.copy_to_host())
             ave_fitness.append(np.mean(F))
             max_fitness.append(np.max(F))
-            
-        return ave_fitness, max_fitness
+
+        end = time.time()
+        runtime = end - start
+        return ave_fitness, max_fitness, runtime
