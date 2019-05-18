@@ -3,8 +3,8 @@ from random import random as rand
 
 
 class KnapsackProblem(object):
-    def __init__(self, m):
-        self.omega = 50
+    def __init__(self, m, omega=50):
+        self.omega = omega
         self.K = m
         self.w = np.random.randint(1, self.omega, self.K)
         self.p = self.w + 0.5*self.omega
@@ -26,7 +26,7 @@ class OSNPS(object):
         self.fitness = fitness  # Fitness function
 
     def fitness_vector(self, T):
-        return [self.fitness(T[i]) for i in range(self.H)]
+        return np.array([self.fitness(T[i]) for i in range(self.H)], dtype=np.int16)
 
     def fitness_argmax(self, F):
         arg = 0
